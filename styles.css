@@ -1,0 +1,118 @@
+:root {
+  --message-bg-color: rgba(25, 25, 35, 0.8);
+  --message-border-color: #be5151;
+  --username-color: #9147ff;
+  --text-color: #ffffff;
+  --animation-speed: 0.3s;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'JetBrains Mono', Consolas, 'Courier New', monospace;
+  overflow: hidden;
+  background-color: transparent;
+}
+
+.chat-container {
+  width: 100%;
+  height: 100vh;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+#chat-messages {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* .chat-message {
+  background-color: var(--message-bg-color);
+  border-left: 4px solid var(--message-border-color);
+  border-radius: 5px;
+  padding: 10px 15px;
+  margin-bottom: 8px;
+  animation: fadeIn var(--animation-speed) ease-in-out;
+  word-wrap: break-word;
+  max-width: 90%;
+}
+
+.username {
+  font-weight: bold;
+  color: var(--username-color);
+  margin-right: 5px;
+}
+
+
+.message-content {
+  color: var(--text-color);
+}
+*/
+
+/* create chat-message with 2 element, username who is box on message-content element */
+
+.chat-message {
+  background-color: var(--message-bg-color);
+  border-left: 4px solid var(--message-border-color);
+  border-radius: 5px;
+  padding: 15px 15px;
+  margin-top: 8px;
+  animation: fadeIn var(--animation-speed) ease-in-out;
+  word-wrap: break-word;
+  max-width: 90%;
+  align-items: center;
+}
+
+.chat-group {
+  position: relative;
+}
+
+.username {
+  background-color: var(--message-border-color);
+  font-weight: bold;
+  color: var(--username-color);
+  margin-right: 10px;
+  flex-shrink: 0;
+  position: absolute;
+  left: -10px;
+  top: -10px;
+  padding: 5px 10px;
+  border-radius: 3px;
+}
+
+.message-content {
+  color: var(--text-color);
+}
+
+/* if same username then no */
+
+.emote {
+  height: 1.5em;
+  vertical-align: middle;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Style pour les badges */
+.badge {
+  display: inline-block;
+  margin-right: 4px;
+  width: 18px;
+  height: 18px;
+  vertical-align: middle;
+}

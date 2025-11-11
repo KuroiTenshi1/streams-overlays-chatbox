@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat Box StreamElements</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --message-bg-color: rgba(163, 72, 90, 0.8);
+      --message-border-color: #662222;
+      --username-color: #9147ff;
+      --text-color: #ffffff;
+      --animation-speed: 0.3s;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'JetBrains Mono', Consolas, 'Courier New', monospace;
+      overflow: hidden;
+      background-color: transparent;
+    }
+
+    .chat-container {
+      width: 100%;
+      height: 100vh;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    #chat-messages {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .chat-message {
+      background-color: var(--message-bg-color);
+      border-left: 4px solid var(--message-border-color);
+      border-radius: 5px;
+      padding: 10px 15px;
+      margin-bottom: 8px;
+      animation: fadeIn var(--animation-speed) ease-in-out;
+      word-wrap: break-word;
+      max-width: 90%;
+    }
+
+    .username {
+      font-weight: bold;
+      color: var(--username-color);
+      margin-right: 5px;
+    }
+
+    .message-content {
+      color: var(--text-color);
+    }
+
+    .emote {
+      height: 1.5em;
+      vertical-align: middle;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeOut {
+      from {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      to {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+    }
+
+    /* Style pour les badges */
+    .badge {
+      display: inline-block;
+      margin-right: 4px;
+      width: 18px;
+      height: 18px;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <ul id="chat-messages"></ul>
+  </div>
+
+  <!-- Code JavaScript intégré pour StreamElements -->
+  <script>
+    // Configuration par défaut
+    let config = {
+      maxMessages: 10,
+      hideAfter: 20, // secondes (modifié de 60 à 20)
+      hideCommands: true,
+      displayBadges: true,
+      colorUsernames: true,
+      animationIn: 'fadeIn',
+      animationOut: 'fadeOut',
+      animationSpeed: 0.3,
+      textShadow: false,
+    };
+
+    // Initialisation de StreamElements
+    window.addEventListener('onEventReceived', function (obj) {
+      if (obj.detail.listener !== "message") return;
+      
+      // Message reçu
+      const data = obj.detail.event.data;
+      handleMessage(data);
+    });
+
+    window.addEventListener('onWidgetLoad', function (obj) {
+      // Récupération de la config depuis StreamElements
+      const fieldData = obj.detail.fieldData;
+      
+      // Mise à jour des configs
+      if (fieldData.maxMessages) config.maxMessages = fieldData.maxMessages;
+      if (fieldData.hideAfter) config.hideAfter = fieldData.hideAfter;
+      if (fieldData.hideCommands !== undefined) config.hideCommands = fieldData.hideCommands;
+      if (fieldData.displayBadges !== undefined) config.displayBadges = fieldData.displayBadges;
+      if (fieldData.colorUsernames !== undefined) config.colorUsernames = fieldData.colorUsernames;
+      if (fieldData.animationSpeed) config.animationSpeed = fieldData.animationSpeed;
+      
+      // Mise à jour du CSS si nécessaire
+      updateCustomStyles(fieldData);
+    });
+
+    function handleMessage(data) {
+      // Ignorer les commandes si l'option est activée
+      if (config.hideCommands && data.text.startsWith('!')) return;
+      
+      // Création du message
+      const chatMessage = createMessageElement(data);
+      
+      // Ajout au DOM
+      const chatMessages = document.getElementById('chat-messages');
+      chatMessages.appendChild(chatMessage);
+      
+      // Limitation du nombre de messages
+      limitMessages();
+      
+      // Auto-suppression après un délai
+      if (config.hideAfter > 0) {
+        setTimeout(() => {
+          if (chatMessage && chatMessage.parentNode) {
+            chatMessage.style.animation = `${config.animationOut} ${config.animationSpeed}s forwards`;
+            setTimeout(() => chatMessage.remove(), config.animationSpeed * 1000);
+          }
+        }, config.hideAfter * 1000);
+      }
+    }
+
+    function createMessageElement(data) {
+      const item = document.createElement('li');
+      item.className = 'chat-message';
+      
+      // Conteneur de badges
+      let badgesHTML = '';
+      if (config.displayBadges && data.badges) {
+        data.badges.forEach(badge => {
+          badgesHTML += `<img class="badge" src="${badge.url}" alt="${badge.type}" />`;
+        });
+      }
+      
+      // Username avec couleur
+      const usernameSpan = document.createElement('span');
+      usernameSpan.className = 'username';
+      usernameSpan.textContent = data.displayName;
+      
+      if (config.colorUsernames && data.displayColor) {
+        usernameSpan.style.color = data.displayColor;
+      }
+      
+      // Contenu du message
+      const messageContent = document.createElement('span');
+      messageContent.className = 'message-content';
+      
+      // Traitement des emotes si présentes
+      if (data.emotes && data.emotes.length > 0) {
+        let text = data.text;
+        let sortedEmotes = [...data.emotes].sort((a, b) => b.start - a.start);
+        
+        sortedEmotes.forEach(emote => {
+          const emoteUrl = emote.urls[1]; // Taille moyenne
+          const emoteImg = `<img class="emote" src="${emoteUrl}" alt="${emote.name}" />`;
+          text = text.substring(0, emote.start) + emoteImg + text.substring(emote.end + 1);
+        });
+        
+        messageContent.innerHTML = text;
+      } else {
+        messageContent.textContent = data.text;
+      }
+      
+      // Assemblage
+      if (badgesHTML) {
+        item.innerHTML = badgesHTML;
+      }
+      
+      item.appendChild(usernameSpan);
+      item.appendChild(messageContent);
+      
+      return item;
+    }
+
+    function limitMessages() {
+      const chatMessages = document.getElementById('chat-messages');
+      const messages = chatMessages.getElementsByClassName('chat-message');
+      
+      while (messages.length > config.maxMessages) {
+        chatMessages.removeChild(messages[0]);
+      }
+    }
+
+    function updateCustomStyles(fieldData) {
+      if (fieldData.messageBgColor) {
+        document.documentElement.style.setProperty('--message-bg-color', fieldData.messageBgColor);
+      }
+      
+      if (fieldData.messageBorderColor) {
+        document.documentElement.style.setProperty('--message-border-color', fieldData.messageBorderColor);
+      }
+      
+      if (fieldData.usernameColor) {
+        document.documentElement.style.setProperty('--username-color', fieldData.usernameColor);
+      }
+      
+      if (fieldData.textColor) {
+        document.documentElement.style.setProperty('--text-color', fieldData.textColor);
+      }
+      
+      if (fieldData.animationSpeed) {
+        document.documentElement.style.setProperty('--animation-speed', fieldData.animationSpeed + 's');
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat Box StreamElements</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* Styles pour le panneau de test */
+    #test-panel {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      background-color: rgba(50, 50, 60, 0.9);
+      color: white;
+      padding: 15px;
+      border-top-right-radius: 10px;
+      z-index: 1000;
+      font-family: 'JetBrains Mono', Consolas, 'Courier New', monospace;
+      transition: transform 0.3s ease;
+    }
+    #test-panel.hidden {
+      transform: translateY(calc(100% - 40px));
+    }
+    #test-panel h3 {
+      margin-top: 0;
+      cursor: pointer;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    .test-inputs {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    #test-message {
+      width: 100%;
+      padding: 5px;
+    }
+    .test-controls button {
+      margin-right: 5px;
+      padding: 5px 10px;
+      background-color: #9147ff;
+      border: none;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .test-controls button:hover {
+      background-color: #7721ff;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <ul id="chat-messages"></ul>
+  </div>
+
+  <!-- Panneau de test pour le développement local -->
+  <div id="test-panel">
+    <h3 id="test-panel-header">▼ Panneau de test (cliquez pour ouvrir)</h3>
+    <div class="test-content">
+      <div class="test-inputs">
+        <label for="test-username">Pseudo:</label>
+        <input type="text" id="test-username" value="TestUser" />
+        
+        <label for="test-user-color">Couleur:</label>
+        <input type="color" id="test-user-color" value="#9147ff" />
+        
+        <label for="test-message">Message:</label>
+        <input type="text" id="test-message" placeholder="Tapez un message de test..." />
+      </div>
+      <div class="test-controls">
+        <button id="send-test-message">Envoyer message</button>
+        <button id="add-sample-messages">Ajouter exemples</button>
+        <button id="clear-messages">Effacer tous les messages</button>
+        <button id="add-emote">Ajouter emote</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+  <script src="script.js"></script>
+  <script>
+
+    // list of emotes for testing
+    const testEmotes = [
+      { code: "Kappa", urls: ["", "https://static-cdn.jtvnw.net/emoticons/v2/25/default/dark/1.0"] },
+      { code: "PogChamp", urls: ["", "https://static-cdn.jtvnw.net/emoticons/v2/305954156/default/dark/1.0"] },
+      { code: "LUL", urls: ["", "https://static-cdn.jtvnw.net/emoticons/v2/425618/default/dark/1.0"] },
+      { code: "FeelsGoodMan", urls: ["", "https://static-cdn.jtvnw.net/emoticons/v2/30259/default/dark/1.0"] },
+      { code: "BibleThump", urls: ["", "https://static-cdn.jtvnw.net/emoticons/v2/86/default/dark/1.0"] }
+    ];
+
+    // Code pour le test en local
+    document.addEventListener('DOMContentLoaded', function() {
+      // Configuration du panneau de test
+      const testPanel = document.getElementById('test-panel');
+      const testHeader = document.getElementById('test-panel-header');
+      
+      testHeader.addEventListener('click', function() {
+        testPanel.classList.toggle('hidden');
+        testHeader.textContent = testPanel.classList.contains('hidden') 
+          ? '▲ Panneau de test (cliquez pour fermer)' 
+          : '▼ Panneau de test (cliquez pour ouvrir)';
+      });
+
+      // Envoi de message test
+      document.getElementById('send-test-message').addEventListener('click', sendTestMessage);
+      document.getElementById('test-message').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          sendTestMessage();
+        }
+      });
+      
+      // Ajout d'exemples
+      document.getElementById('add-sample-messages').addEventListener('click', addSampleMessages);
+      
+      // Effacer tous les messages
+      document.getElementById('clear-messages').addEventListener('click', function() {
+        document.getElementById('chat-messages').innerHTML = '';
+      });
+
+      // Ajouter une emote au message actuel
+      document.getElementById('add-emote').addEventListener('click', function() {
+        const emote = testEmotes[Math.floor(Math.random() * testEmotes.length)];
+        const messageInput = document.getElementById('test-message');
+        messageInput.value += ` ${emote.code} `;
+        messageInput.focus();
+      });
+      
+      function sendTestMessage() {
+        const username = document.getElementById('test-username').value || 'TestUser';
+        const userColor = document.getElementById('test-user-color').value || '#9147ff';
+        const message = document.getElementById('test-message').value;
+        
+        if (!message) return;
+        
+        // Création d'un événement similaire à StreamElements
+        const testEvent = {
+          detail: {
+            listener: "message",
+            event: {
+              data: {
+                displayName: username,
+                displayColor: userColor,
+                text: message,
+                badges: [],
+                emotes: []
+              }
+            }
+          }
+        };
+
+        // Ajout de l'emote objet au message si présente
+        // détecte toutes les emotes présentes (insensible à la casse, correspondance sur les mots)
+        function escapeRegex(s) {
+          return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+        const matchedEmotes = [];
+        for (const e of testEmotes) {
+          const re = new RegExp(`\\b${escapeRegex(e.code)}\\b`, 'i');
+          if (re.test(message)) matchedEmotes.push(e);
+        }
+        matchedEmotes.forEach(m => testEvent.detail.event.data.emotes.push(m));
+
+        // Simulation de l'événement de StreamElements
+        window.dispatchEvent(new CustomEvent('onEventReceived', { detail: testEvent.detail }));
+        
+        // Réinitialisation du champ de message
+        document.getElementById('test-message').value = '';
+      }
+      
+      function addSampleMessages() {
+        const sampleMessages = [
+          { name: "Viewer1", color: "#FF5733", message: "Salut tout le monde !" },
+          { name: "Moderateur", color: "#33FF57", message: "Bienvenue dans le stream !" },
+          { name: "Subscriber", color: "#3357FF", message: "J'aime beaucoup ce contenu 😍" },
+          { name: "RandomUser", color: "#F033FF", message: "Est-ce que quelqu'un peut m'expliquer ce qui se passe ?" },
+          { name: "StreamerFan", color: "#FF33A8", message: "Incroyable cette partie !!" }
+        ];
+        
+        sampleMessages.forEach((sample, index) => {
+          setTimeout(() => {
+            const testEvent = {
+              detail: {
+                listener: "message",
+                event: {
+                  data: {
+                    displayName: sample.name,
+                    displayColor: sample.color,
+                    text: sample.message,
+                    badges: [],
+                    emotes: []
+                  }
+                }
+              }
+            };
+            window.dispatchEvent(new CustomEvent('onEventReceived', { detail: testEvent.detail }));
+          }, index * 500); // Délai de 500ms entre chaque message
+        });
+      }
+      
+      // Simulation de chargement du widget
+      window.dispatchEvent(new CustomEvent('onWidgetLoad', {
+        detail: {
+          fieldData: {
+            maxMessages: 10,
+            // hideAfter: 60,
+            hideAfter: 0,
+            hideCommands: true,
+            displayBadges: true,
+            colorUsernames: true,
+            messageBgColor: "rgba(163, 72, 90, 0.8)",
+            messageBorderColor: "#662222",
+            textColor: "#ffffff",
+            animationSpeed: 0.3
+          }
+        }
+      }));
+    });
+  </script>
+</body>
+</html>
